@@ -1,0 +1,64 @@
+/*
+ * Design tokens for the whole app (see plan §8).
+ *
+ * Rules encoded here, so no component should ever hardcode a hex value:
+ *  - white / near-white backgrounds
+ *  - greyscale tonal accents only, never a hue-based "primary" colour
+ *  - no gradients anywhere in the UI chrome; flat fills + soft grey shadows
+ *  - icons are monochrome and inherit currentColor
+ */
+:root {
+  /* Surfaces */
+  --color-bg: #ffffff;
+  --color-bg-sunken: #fafafa;
+  --color-bg-panel: #ffffff;
+  --color-bg-inset: #f5f5f5;
+  --color-bg-hover: #f0f0f0;
+  --color-bg-active: #e8e8e8;
+
+  /* Tonal accent — value-based, not colour-based */
+  --color-accent: #2a2a2a;
+  --color-accent-hover: #1a1a1a;
+  --color-on-accent: #ffffff;
+
+  /* Text */
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #9a9a9a;
+  --color-text-on-accent: #ffffff;
+
+  /* Lines */
+  --color-border: #e2e2e2;
+  --color-border-strong: #c9c9c9;
+  --color-focus-ring: #1a1a1a;
+
+  /* Elevation — soft grey only, never coloured, never a gradient */
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  /* Type */
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+
+  /* Layout */
+  --sidebar-width: 340px;
+  --header-height: 48px;
+
+  color-scheme: light;
+}
