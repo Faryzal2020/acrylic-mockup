@@ -115,6 +115,32 @@ Tracing runs on a downsampled alpha mask (320px longest edge) extracted once at
 upload, and results are cached per border width, so dragging an unrelated
 slider never re-traces.
 
+## Base and mounting
+
+The base is a flat plate cut from the same sheet stock as the panel — circular
+by default, 3mm thick — lying on the ground with a slot through it. The standee
+does not sink into it; its silhouette rests on the top face and only a mounting
+tab passes through the slot.
+
+The tab is painted into the alpha mask *after* the border dilation, so it comes
+out at exactly the requested width instead of inheriting the decorative cut
+border. That matters because the slot has to match it. It is painted before
+hole-filling and island detection, and overlaps up into the silhouette by 6% of
+the artwork height so the two merge into one island rather than leaving a
+rectangle floating below the character.
+
+Panel height is measured from the silhouette, excluding the tab. The silhouette
+bounds are derived analytically — dilating by `b` grows a bounding box by
+exactly `b` on every side — rather than from the traced contour, which now
+includes the tab and would otherwise make `panel.heightMm` drift.
+
+In a stack, only layers whose silhouette bottom is within 15% of the panel
+bottom get a tab, so a body layer mounts and a floating detail layer (a pair of
+eyes) does not. The slot is sized to swallow the whole stack's depth.
+
+Rectangular panels get no separate tab — the whole bottom edge slots in, so the
+slot simply spans most of the panel width.
+
 ## Background and transparent export
 
 **Background → Behind the product** picks Studio (the gradient sweep), Solid

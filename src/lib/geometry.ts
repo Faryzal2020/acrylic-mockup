@@ -41,6 +41,31 @@ export function polygonShapes(contours: { x: number; y: number }[][]): THREE.Sha
   })
 }
 
+/** A disc, for the base plate. */
+export function circleShape(radius: number): THREE.Shape {
+  const shape = new THREE.Shape()
+  shape.absarc(0, 0, radius, 0, Math.PI * 2, false)
+  return shape
+}
+
+/** A rectangular hole path — the slot the standee's tab drops into. */
+export function rectHole(
+  centreX: number,
+  centreY: number,
+  width: number,
+  height: number,
+): THREE.Path {
+  const path = new THREE.Path()
+  const w = width / 2
+  const h = height / 2
+  path.moveTo(centreX - w, centreY - h)
+  path.lineTo(centreX - w, centreY + h)
+  path.lineTo(centreX + w, centreY + h)
+  path.lineTo(centreX + w, centreY - h)
+  path.closePath()
+  return path
+}
+
 /** A circular hole path, for a keyring's through-hole. */
 export function circleHole(cx: number, cy: number, radius: number): THREE.Path {
   const path = new THREE.Path()

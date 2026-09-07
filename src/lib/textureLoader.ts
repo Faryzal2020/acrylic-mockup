@@ -30,7 +30,8 @@ export async function loadImageAsset(file: File): Promise<ImageAsset> {
       width: bitmap.width,
       height: bitmap.height,
       texture,
-      alphaMask: extractAlphaMask(bitmap),
+      // The bitmap above is flipped for WebGL; the mask needs it upright.
+      alphaMask: extractAlphaMask(bitmap, { sourceIsFlipped: true }),
     }
   } catch (error) {
     URL.revokeObjectURL(url)

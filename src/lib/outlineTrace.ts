@@ -14,11 +14,28 @@ export type TracedOutline = {
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
 }
 
+/**
+ * The tab that drops into the base's slot, in image space (the source image is
+ * 1 tall, `aspect` wide, centred, y-up).
+ *
+ * It is painted into the mask *after* dilation, so it comes out at exactly the
+ * requested width instead of inheriting the decorative cut border — the slot
+ * has to match it. `top` should sit a little above the silhouette's bottom edge
+ * so the two merge into a single island rather than a floating rectangle.
+ */
+export type OutlineTab = {
+  width: number
+  centreX: number
+  top: number
+  bottom: number
+}
+
 export type TraceOptions = {
   /** 0-255. Pixels at or above this alpha are part of the artwork. */
   alphaThreshold: number
   /** Border lip, as a fraction of the artwork's height. */
   borderFraction: number
+  tab?: OutlineTab | null
 }
 
 /**
@@ -31,6 +48,7 @@ const traceCache = new WeakMap<AlphaMask, Map<string, TracedOutline | null>>()
 export function traceOutlineCached(
   mask: AlphaMask,
   borderFraction: number,
+  tab?: OutlineTab | null,
 ): TracedOutline | null {
   let perMask = traceCache.get(mask)
   if (!perMask) {
@@ -40,7 +58,11 @@ export function traceOutlineCached(
 
   // Quantise so sub-pixel jitter in the border does not defeat the cache.
   const quantised = Math.round(borderFraction * 2000) / 2000
-  const key = String(quantised)
+  const q = (n: number) => Math.round(n * 2000) / 2000
+  const quantisedTab = tab
+    ? { width: q(tab.width), centreX: q(tab.centreX), top: q(tab.top), bottom: q(tab.bottom) }
+    : null
+  const key = `${quantised}|${quantisedTab ? Object.values(quantisedTab).join(',') : 'none'}`
 
   if (!perMask.has(key)) {
     perMask.set(
@@ -48,6 +70,7 @@ export function traceOutlineCached(
       traceOutline(mask, {
         alphaThreshold: ALPHA_THRESHOLD,
         borderFraction: quantised,
+        tab: quantisedTab,
       }),
     )
   }
@@ -67,7 +90,13 @@ export function traceOutlineCached(
  */
 export function traceOutline(mask: AlphaMask, options: TraceOptions): TracedOutline | null {
   const borderPx = Math.max(0, options.borderFraction * mask.height)
-  const pad = Math.ceil(borderPx) + 2
+
+  // The tab can hang below the source image, so the working buffer has to be
+  // padded far enough to hold it.
+  const tabOverhangPx = options.tab
+    ? Math.max(0, (0.5 - options.tab.bottom) * mask.height - mask.height)
+    : 0
+  const pad = Math.ceil(borderPx) + Math.ceil(tabOverhangPx) + 2
   const width = mask.width + pad * 2
   const height = mask.height + pad * 2
 
@@ -84,6 +113,7 @@ export function traceOutline(mask: AlphaMask, options: TraceOptions): TracedOutl
   if (!any) return null
 
   const grown = borderPx > 0 ? dilate(binary, width, height, borderPx) : binary
+  if (options.tab) paintTab(grown, width, height, pad, mask, options.tab)
   const solid = fillHoles(grown, width, height)
   const islands = findIslands(solid, width, height)
   if (!islands.length) return null
@@ -198,6 +228,31 @@ function fillHoles(binary: Uint8Array, width: number, height: number): Uint8Arra
   const out = new Uint8Array(width * height)
   for (let i = 0; i < out.length; i++) out[i] = outside[i] ? 0 : 1
   return out
+}
+
+/** Fills in the mounting tab, in mask pixels, after the border dilation. */
+function paintTab(
+  binary: Uint8Array,
+  width: number,
+  height: number,
+  pad: number,
+  mask: AlphaMask,
+  tab: OutlineTab,
+) {
+  const aspect = mask.width / mask.height
+  const toCol = (x: number) => (x / aspect + 0.5) * mask.width + pad
+  const toRow = (y: number) => (0.5 - y) * mask.height + pad
+
+  const left = Math.round(toCol(tab.centreX - tab.width / 2))
+  const right = Math.round(toCol(tab.centreX + tab.width / 2))
+  const top = Math.round(toRow(tab.top))
+  const bottom = Math.round(toRow(tab.bottom))
+
+  for (let y = Math.max(0, top); y < Math.min(height, bottom); y++) {
+    for (let x = Math.max(0, left); x < Math.min(width, right); x++) {
+      binary[y * width + x] = 1
+    }
+  }
 }
 
 /** Minimum island area, relative to the biggest one, before it counts as a piece. */

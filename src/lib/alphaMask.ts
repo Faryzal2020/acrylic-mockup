@@ -23,7 +23,16 @@ export const ALPHA_THRESHOLD = 128
 /** Longest edge of the working mask. Enough detail for a cut line, cheap to trace. */
 export const MASK_MAX_EDGE = 320
 
-export function extractAlphaMask(source: ImageBitmap): AlphaMask {
+/**
+ * @param sourceIsFlipped true when the bitmap was decoded with
+ * `imageOrientation: 'flipY'` for WebGL's benefit. The mask has to describe the
+ * artwork the right way up or the traced cut line comes out mirrored against
+ * the print, so the flip is undone while drawing.
+ */
+export function extractAlphaMask(
+  source: ImageBitmap,
+  { sourceIsFlipped }: { sourceIsFlipped: boolean },
+): AlphaMask {
   const scale = Math.min(1, MASK_MAX_EDGE / Math.max(source.width, source.height))
   const width = Math.max(1, Math.round(source.width * scale))
   const height = Math.max(1, Math.round(source.height * scale))
@@ -35,7 +44,12 @@ export function extractAlphaMask(source: ImageBitmap): AlphaMask {
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context) throw new Error('2D canvas context unavailable for alpha extraction.')
 
+  if (sourceIsFlipped) {
+    context.translate(0, height)
+    context.scale(1, -1)
+  }
   context.drawImage(source, 0, 0, width, height)
+  context.setTransform(1, 0, 0, 1, 0, 0)
   const { data: rgba } = context.getImageData(0, 0, width, height)
 
   const data = new Uint8Array(width * height)

@@ -36,9 +36,14 @@ export type SceneDimensions = {
   /** Total front-to-back depth of the whole layer stack, in metres. */
   stackDepth: number
   base: {
+    /** Across the base, in metres. */
     width: number
-    height: number
+    /** Front-to-back, in metres. Equal to width for a circular base. */
     depth: number
+    /** Sheet thickness of the base plate, in metres. */
+    thickness: number
+    /** The cut-out the standee's tab drops through, in base-local metres. */
+    slot: { x: number; width: number; depth: number } | null
   }
   layers: LayerLayout[]
   /**
@@ -68,7 +73,8 @@ export function getSceneDimensions(
     }
   })
 
-  const baseHeight = config.base.enabled ? mm(config.base.height) : 0
+  const baseThickness = config.base.enabled ? mm(config.base.thickness) : 0
+  const baseWidth = mm(config.base.diameter)
 
   const hardwareAnchor = {
     x: (config.hardware.position.x - 0.5) * shape.panelWidth,
@@ -83,14 +89,18 @@ export function getSceneDimensions(
     panelWidth: shape.panelWidth,
     panelHeight: shape.panelHeight,
     cornerRadius: mm(config.panel.cornerRadiusMm),
-    // With a base, the panel sinks partway into the slot rather than balancing
-    // on top of it.
-    panelCentreY: (config.base.enabled ? baseHeight * 0.45 : 0) + shape.panelHeight / 2,
+    // The silhouette rests on the top face of the base plate; only the tab
+    // goes below, down through the slot.
+    panelCentreY: baseThickness + shape.panelHeight / 2,
     stackDepth: zOffsets.total,
     base: {
-      width: shape.panelWidth * 1.15,
-      height: baseHeight,
-      depth: Math.max(mm(config.base.depth), zOffsets.total * 2.2),
+      width: baseWidth,
+      depth: config.base.shape === 'circle' ? baseWidth : baseWidth * 0.5,
+      thickness: baseThickness,
+      // Slot depth is only knowable here, once the stack's total depth is:
+      // one slot has to swallow every layer's tab. 0.6mm of clearance keeps
+      // the cut visible rather than z-fighting the acrylic.
+      slot: shape.slot && { ...shape.slot, depth: zOffsets.total + mm(0.6) },
     },
     layers,
     hole,
@@ -120,8 +130,18 @@ function getLayerZOffsets(layers: AcrylicLayer[]) {
 type PanelShape = {
   panelWidth: number
   panelHeight: number
+  slot: SceneDimensions['base']['slot']
   forLayer: (asset: ImageAsset | undefined) => Pick<LayerLayout, 'outline' | 'art' | 'offset'>
 }
+
+/**
+ * How far a layer's silhouette bottom may sit above the panel bottom and still
+ * count as a piece that reaches the base. Body layers get a mounting tab;
+ * a floating detail layer — a pair of eyes — does not.
+ */
+const TAB_REACH = 0.15
+/** How far the tab overlaps up into the silhouette so the two merge as one island. */
+const TAB_OVERLAP = 0.06
 
 function getPanelShape(
   config: MockupConfig,
@@ -143,13 +163,18 @@ function getPanelShape(
 
   if (traced) return traced
 
-  // Rounded rectangle: one shared silhouette, artwork fitted inside it.
+  // Rounded rectangle: one shared silhouette, artwork fitted inside it. A
+  // rectangular panel needs no tab — its whole bottom edge is the tab, so the
+  // slot simply spans the panel.
   const aspect = reference ? reference.width / reference.height : DEFAULT_ASPECT
   const panelWidth = panelHeight * aspect
 
   return {
     panelWidth,
     panelHeight,
+    slot: config.base.enabled
+      ? { x: 0, width: panelWidth * 0.7, depth: 0 }
+      : null,
     forLayer: (asset) => ({
       outline: null,
       art: asset ? fitArtwork(asset, panelWidth, panelHeight) : null,
@@ -180,25 +205,76 @@ function getTracedShape(config: MockupConfig, reference: ImageAsset): PanelShape
   const borderFractionFor = (asset: ImageAsset) => borderMm / (asset.height * mmPerPixel)
   const metresPerUnitFor = (asset: ImageAsset) => asset.height * mmPerPixel * MM
 
-  const referenceOutline = traceOutlineCached(
-    reference.alphaMask,
-    borderFractionFor(reference),
-  )
-  if (!referenceOutline) return null
-
   const refScale = metresPerUnitFor(reference)
-  const refBounds = referenceOutline.bounds
-  const shiftX = -((refBounds.minX + refBounds.maxX) / 2) * refScale
-  const shiftY = -((refBounds.minY + refBounds.maxY) / 2) * refScale
+
+  // Dilating by b grows the bounding box by exactly b on every side, so the
+  // silhouette's extent is known without tracing. Taking it from here rather
+  // than from the traced contour is what keeps `panel.heightMm` meaning the
+  // standee's height — the mounting tab hangs below it and must not count.
+  const silhouetteOf = (asset: ImageAsset) => {
+    const b = asset.alphaMask.bounds
+    if (!b) return null
+    const border = borderFractionFor(asset)
+    return {
+      minX: b.minX - border,
+      maxX: b.maxX + border,
+      minY: b.minY - border,
+      maxY: b.maxY + border,
+    }
+  }
+
+  const refSilhouette = silhouetteOf(reference)
+  if (!refSilhouette) return null
+
+  const shiftX = -((refSilhouette.minX + refSilhouette.maxX) / 2) * refScale
+  const shiftY = -((refSilhouette.minY + refSilhouette.maxY) / 2) * refScale
+  const panelHeightM = (refSilhouette.maxY - refSilhouette.minY) * refScale
+
+  const tabWidthMm = Math.max(0, config.panel.tabWidthMm)
+  const tabLengthMm = config.base.thickness
+
+  const tabFor = (asset: ImageAsset) => {
+    if (!config.base.enabled || tabWidthMm <= 0) return null
+
+    const silhouette = silhouetteOf(asset)
+    if (!silhouette) return null
+
+    // Only pieces that actually come down to the base get one.
+    const bottomGap = ((silhouette.minY - refSilhouette.minY) * refScale) / panelHeightM
+    if (bottomGap > TAB_REACH) return null
+
+    const unitsPerMm = 1 / (asset.height * mmPerPixel)
+    const artHeight = silhouette.maxY - silhouette.minY
+
+    return {
+      width: tabWidthMm * unitsPerMm,
+      centreX: (silhouette.minX + silhouette.maxX) / 2,
+      top: silhouette.minY + artHeight * TAB_OVERLAP,
+      bottom: silhouette.minY - tabLengthMm * unitsPerMm,
+    }
+  }
+
+  const slotTab = tabFor(reference)
 
   return {
-    panelWidth: (refBounds.maxX - refBounds.minX) * refScale,
-    panelHeight: (refBounds.maxY - refBounds.minY) * refScale,
+    panelWidth: (refSilhouette.maxX - refSilhouette.minX) * refScale,
+    panelHeight: panelHeightM,
+    slot: slotTab
+      ? {
+          x: slotTab.centreX * refScale + shiftX,
+          width: slotTab.width * refScale,
+          depth: 0,
+        }
+      : null,
     forLayer: (asset) => {
       if (!asset?.alphaMask.bounds) return { outline: null, art: null, offset: [0, 0] }
 
       const scale = metresPerUnitFor(asset)
-      const outline = traceOutlineCached(asset.alphaMask, borderFractionFor(asset))
+      const outline = traceOutlineCached(
+        asset.alphaMask,
+        borderFractionFor(asset),
+        tabFor(asset),
+      )
 
       return {
         outline: outline

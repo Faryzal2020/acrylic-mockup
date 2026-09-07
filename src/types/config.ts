@@ -20,6 +20,8 @@ export type MockupConfig = {
     cornerRadiusMm: number
     /** Clear lip cut outside the artwork, when tracing the silhouette. */
     borderMm: number
+    /** Width of the tab that drops into the base's slot, in mm. */
+    tabWidthMm: number
   }
 
   /** Ordered back-to-front along +Z. */
@@ -28,8 +30,10 @@ export type MockupConfig = {
   base: {
     enabled: boolean
     shape: BaseShape
-    height: number
-    depth: number
+    /** Sheet thickness of the base itself, in mm — it is cut from acrylic too. */
+    thickness: number
+    /** Across the base, in mm. Diameter for a circle, width otherwise. */
+    diameter: number
     color: string
     imageOnBase: boolean
   }
@@ -88,14 +92,14 @@ export type AcrylicLayer = {
 export type ProductType = 'standee' | 'keychain' | 'phoneGrip' | 'badge'
 export type PanelShape = 'rounded' | 'traceFromAlpha'
 export type BackgroundMode = 'studio' | 'solid' | 'transparent'
-export type BaseShape = 'rectangle' | 'rounded' | 'traceFromAlpha'
+export type BaseShape = 'circle' | 'rectangle' | 'rounded'
 export type HardwareType = 'none' | 'keyring' | 'popSocket'
 export type MaterialFinish = 'clear' | 'frosted' | 'tinted'
 export type CameraPreset = 'threeQuarter' | 'front' | 'edgeCloseup' | 'custom'
 export type LightingPreset = 'studioSoft' | 'studioHard' | 'daylight'
 export type ImageMode = 'surfacePrint' | 'sandwiched'
 
-export const CONFIG_VERSION = 1
+export const CONFIG_VERSION = 2
 
 /**
  * What switching product type changes. Everything not listed — layers,
@@ -157,13 +161,15 @@ export function createDefaultConfig(): MockupConfig {
       heightMm: 150,
       cornerRadiusMm: 4,
       borderMm: 3,
+      tabWidthMm: 24,
     },
     layers: [createLayer()],
     base: {
       enabled: true,
-      shape: 'rounded',
-      height: 12,
-      depth: 26,
+      shape: 'circle',
+      // Cut from the same 3mm sheet as the panel, lying flat with a slot in it.
+      thickness: 3,
+      diameter: 70,
       color: '#d8d8d8',
       imageOnBase: false,
     },
