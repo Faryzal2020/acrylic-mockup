@@ -1,77 +1,25 @@
-import { ImagePlus, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
-import { loadImageAsset } from '../../lib/textureLoader'
+import { Trash2 } from 'lucide-react'
 import { useConfigStore } from '../../store/configStore'
+import { AssetDropzone } from './AssetDropzone'
 import { Button } from './controls'
 import { useSelectedLayer } from './useSelectedLayer'
 
-/**
- * PNG upload. Everything happens in the browser — the file is decoded to a
- * texture and never uploaded anywhere, which is what keeps this deployable as
- * a static site.
- */
+/** The session's artwork library, and which layer the next upload lands on. */
 export function ArtworkControls() {
   const assets = useConfigStore((s) => s.assets)
-  const addAsset = useConfigStore((s) => s.addAsset)
   const removeAsset = useConfigStore((s) => s.removeAsset)
   const patchLayer = useConfigStore((s) => s.patchLayer)
   const layer = useSelectedLayer()
   const layerNumber = useConfigStore((s) => s.config.layers.indexOf(layer) + 1)
 
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const ingest = async (files: FileList | null) => {
-    if (!files?.length) return
-    setError(null)
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) {
-        setError(`"${file.name}" is not an image.`)
-        continue
-      }
-      try {
-        const asset = await loadImageAsset(file)
-        addAsset(asset)
-        patchLayer(layer.id, { imageAssetId: asset.id })
-      } catch {
-        setError(`Could not read "${file.name}".`)
-      }
-    }
-  }
-
   const list = Object.values(assets)
 
   return (
     <>
-      <label
-        className={`upload${dragging ? ' upload--dragging' : ''}`}
-        onDragOver={(event) => {
-          event.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault()
-          setDragging(false)
-          void ingest(event.dataTransfer.files)
-        }}
-      >
-        <ImagePlus size={20} aria-hidden />
-        <span>Drop a transparent PNG, or click to browse</span>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/png,image/webp,image/*"
-          multiple
-          onChange={(event) => {
-            void ingest(event.target.files)
-            event.target.value = ''
-          }}
-        />
-      </label>
-
-      {error && <p className="field__hint">{error}</p>}
+      <AssetDropzone
+        label="Drop a transparent PNG, or click to browse"
+        onAssigned={(assetId) => patchLayer(layer.id, { imageAssetId: assetId })}
+      />
 
       {list.length > 0 && (
         <ul className="asset-list">

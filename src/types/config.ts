@@ -34,8 +34,16 @@ export type MockupConfig = {
     thickness: number
     /** Across the base, in mm. Diameter for a circle, width otherwise. */
     diameter: number
-    color: string
+    /**
+     * The base's own artwork, seen from above. Assigning one switches `shape`
+     * to 'traceFromAlpha'; it is a separate slot from the layers' artwork.
+     */
+    imageAssetId: string | null
+    /** Print that artwork on the top face, rather than only cutting to it. */
     imageOnBase: boolean
+    /** Off by default — a base normally reads as plain clear acrylic. */
+    tintEnabled: boolean
+    color: string
   }
 
   hardware: {
@@ -70,6 +78,23 @@ export type MockupConfig = {
     /** Used when mode is 'solid'. */
     color: string
   }
+
+  /**
+   * Ink lines drawn over the render. Widths are in screen pixels, so they hold
+   * their weight as you zoom and scale with the export resolution.
+   */
+  lines: {
+    /** Geometric edges: the cut contours and any sharp creases. */
+    edges: LineStyle
+    /** Silhouette drawn around each piece. Heavier than the edges. */
+    outline: LineStyle
+  }
+}
+
+export type LineStyle = {
+  enabled: boolean
+  width: number
+  color: string
 }
 
 export type AcrylicLayer = {
@@ -92,14 +117,14 @@ export type AcrylicLayer = {
 export type ProductType = 'standee' | 'keychain' | 'phoneGrip' | 'badge'
 export type PanelShape = 'rounded' | 'traceFromAlpha'
 export type BackgroundMode = 'studio' | 'solid' | 'transparent'
-export type BaseShape = 'circle' | 'rectangle' | 'rounded'
+export type BaseShape = 'circle' | 'rectangle' | 'rounded' | 'traceFromAlpha'
 export type HardwareType = 'none' | 'keyring' | 'popSocket'
 export type MaterialFinish = 'clear' | 'frosted' | 'tinted'
 export type CameraPreset = 'threeQuarter' | 'front' | 'edgeCloseup' | 'custom'
 export type LightingPreset = 'studioSoft' | 'studioHard' | 'daylight'
 export type ImageMode = 'surfacePrint' | 'sandwiched'
 
-export const CONFIG_VERSION = 2
+export const CONFIG_VERSION = 4
 
 /**
  * What switching product type changes. Everything not listed — layers,
@@ -170,8 +195,10 @@ export function createDefaultConfig(): MockupConfig {
       // Cut from the same 3mm sheet as the panel, lying flat with a slot in it.
       thickness: 3,
       diameter: 70,
+      imageAssetId: null,
+      imageOnBase: true,
+      tintEnabled: false,
       color: '#d8d8d8',
-      imageOnBase: false,
     },
     hardware: { type: 'none', position: { x: 0.5, y: 0.92 }, holeDiameter: 4 },
     material: {
@@ -184,5 +211,9 @@ export function createDefaultConfig(): MockupConfig {
     camera: { preset: 'threeQuarter' },
     lighting: { preset: 'studioSoft', environmentIntensity: 1 },
     background: { mode: 'studio', color: '#f2f2f2' },
+    lines: {
+      edges: { enabled: true, width: 1.5, color: '#2f2f2f' },
+      outline: { enabled: false, width: 4, color: '#1a1a1a' },
+    },
   }
 }

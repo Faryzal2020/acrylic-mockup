@@ -3,6 +3,7 @@ import { ArtworkControls } from './ArtworkControls'
 import { BackgroundControls } from './BackgroundControls'
 import { BaseControls } from './BaseControls'
 import { LayerList } from './LayerList'
+import { LineControls } from './LineControls'
 import { CameraLightingControls } from './CameraLightingControls'
 import { ExportControls } from './ExportControls'
 import { MaterialControls } from './MaterialControls'
@@ -43,6 +44,10 @@ export function ConfigPanel({ viewport }: { viewport: { width: number; height: n
 
       <Section title="Material">
         <MaterialControls />
+      </Section>
+
+      <Section title="Lines">
+        <LineControls />
       </Section>
 
       <Section title="Camera & lighting">

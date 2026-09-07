@@ -42,6 +42,8 @@ type ConfigState = {
   moveLayer: (id: string, direction: -1 | 1) => void
 
   addAsset: (asset: ImageAsset) => void
+  /** Assigns the base's artwork; a non-null id also switches the base to tracing. */
+  setBaseArtwork: (assetId: string | null) => void
   removeAsset: (id: string) => void
 
   setProductType: (productType: ProductType) => void
@@ -119,6 +121,24 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   addAsset: (asset) => set((s) => ({ assets: { ...s.assets, [asset.id]: asset } })),
 
+  setBaseArtwork: (assetId) =>
+    set((s) => ({
+      config: {
+        ...s.config,
+        base: {
+          ...s.config.base,
+          imageAssetId: assetId,
+          // Giving the base artwork implies you want it cut to that artwork;
+          // clearing it drops back to a plain disc.
+          shape: assetId
+            ? 'traceFromAlpha'
+            : s.config.base.shape === 'traceFromAlpha'
+              ? 'circle'
+              : s.config.base.shape,
+        },
+      },
+    })),
+
   removeAsset: (id) =>
     set((s) => {
       const { [id]: removed, ...rest } = s.assets
@@ -126,6 +146,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         removed.texture.dispose()
         URL.revokeObjectURL(removed.url)
       }
+      const baseUsedIt = s.config.base.imageAssetId === id
+
       return {
         assets: rest,
         config: {
@@ -133,6 +155,13 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           layers: s.config.layers.map((l) =>
             l.imageAssetId === id ? { ...l, imageAssetId: null } : l,
           ),
+          base: baseUsedIt
+            ? {
+                ...s.config.base,
+                imageAssetId: null,
+                shape: s.config.base.shape === 'traceFromAlpha' ? 'circle' : s.config.base.shape,
+              }
+            : s.config.base,
         },
       }
     }),

@@ -44,6 +44,16 @@ export type SceneDimensions = {
     thickness: number
     /** The cut-out the standee's tab drops through, in base-local metres. */
     slot: { x: number; width: number; depth: number } | null
+    /**
+     * Base plate cut to its own artwork, in base-local metres — one closed
+     * polygon per piece. Null falls back to the circle/rectangle shapes.
+     *
+     * Base-local means the flat shape space the plate is extruded in, where x
+     * is world x and y is world -z, so the artwork reads as a plan view.
+     */
+    outline: { x: number; y: number }[][] | null
+    /** Where that artwork prints on the top face, in the same space. */
+    art: { width: number; height: number; x: number; y: number } | null
   }
   layers: LayerLayout[]
   /**
@@ -74,7 +84,7 @@ export function getSceneDimensions(
   })
 
   const baseThickness = config.base.enabled ? mm(config.base.thickness) : 0
-  const baseWidth = mm(config.base.diameter)
+  const basePlate = getBasePlate(config, assets)
 
   const hardwareAnchor = {
     x: (config.hardware.position.x - 0.5) * shape.panelWidth,
@@ -94,8 +104,7 @@ export function getSceneDimensions(
     panelCentreY: baseThickness + shape.panelHeight / 2,
     stackDepth: zOffsets.total,
     base: {
-      width: baseWidth,
-      depth: config.base.shape === 'circle' ? baseWidth : baseWidth * 0.5,
+      ...basePlate,
       thickness: baseThickness,
       // Slot depth is only knowable here, once the stack's total depth is:
       // one slot has to swallow every layer's tab. 0.6mm of clearance keeps
@@ -105,6 +114,52 @@ export function getSceneDimensions(
     layers,
     hole,
     hardwareAnchor,
+  }
+}
+
+/**
+ * The base plate's footprint. With artwork assigned it is cut to that
+ * artwork's alpha, read as a plan view; otherwise it is a plain disc or
+ * rectangle. `base.diameter` sizes it across in either case.
+ */
+function getBasePlate(config: MockupConfig, assets: Record<string, ImageAsset>) {
+  const across = mm(config.base.diameter)
+  const asset = config.base.imageAssetId ? assets[config.base.imageAssetId] : undefined
+
+  const plain = {
+    width: across,
+    depth: config.base.shape === 'circle' ? across : across * 0.5,
+    outline: null,
+    art: null,
+  }
+
+  if (config.base.shape !== 'traceFromAlpha' || !asset?.alphaMask.bounds) return plain
+
+  // No border dilation here: the uploaded artwork *is* the intended footprint,
+  // unlike the panel where the lip is a deliberate manufacturing allowance.
+  const traced = traceOutlineCached(asset.alphaMask, 0)
+  if (!traced) return plain
+
+  const { minX, maxX, minY, maxY } = traced.bounds
+  const spanX = maxX - minX
+  if (spanX <= 0) return plain
+
+  const scale = across / spanX
+  const centreX = (minX + maxX) / 2
+  const centreY = (minY + maxY) / 2
+
+  return {
+    width: across,
+    depth: (maxY - minY) * scale,
+    outline: traced.contours.map((contour) =>
+      contour.map((p) => ({ x: (p.x - centreX) * scale, y: (p.y - centreY) * scale })),
+    ),
+    art: {
+      width: (asset.width / asset.height) * scale,
+      height: scale,
+      x: -centreX * scale,
+      y: -centreY * scale,
+    },
   }
 }
 

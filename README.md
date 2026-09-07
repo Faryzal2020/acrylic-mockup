@@ -141,6 +141,57 @@ eyes) does not. The slot is sized to swallow the whole stack's depth.
 Rectangular panels get no separate tab — the whole bottom edge slots in, so the
 slot simply spans most of the panel width.
 
+### Base artwork
+
+The base has its own artwork slot, separate from the layers'. Dropping a PNG on
+the Base section's dropzone switches `base.shape` to `traceFromAlpha` and cuts
+the plate to that artwork's outline; clearing it drops back to a plain disc.
+
+The artwork is read as a **plan view** — the plate is extruded along +Z and then
+laid flat, so in that shape space x is world x and y is world -z, and the top of
+the image points away from the camera. It is also printed on the top face by
+default; **Print artwork on base** turns that off to keep the cut shape alone.
+
+Unlike the panel, the base is traced with **no border dilation**: the uploaded
+artwork *is* the intended footprint, whereas the panel's lip is a deliberate
+manufacturing allowance. `base.diameter` measures across the traced outline and
+the depth follows the artwork's proportions.
+
+Base tint is opt-in and **off by default**, artwork or not — a base normally
+reads as plain clear acrylic.
+
+## Ink lines
+
+**Lines** draws two independent overlays, both with width in **screen pixels**
+so they hold their weight as you orbit and scale with the export resolution
+rather than thinning out at 2x or 3x:
+
+- **Edge lines** — geometric edges via `EdgesGeometry` at an 18-degree crease
+  threshold, so the cut contour and the bevel get a line but a smoothed traced
+  outline does not sprout one at every segment join. On by default at 1.5px.
+- **Outline** — a heavier silhouette around each piece, off by default at 4px.
+
+Two non-obvious things are load bearing here.
+
+drei's `screenspace` flag on `Outlines` reads backwards: `screenspace={false}`
+is the branch that divides the offset by viewport size, which is the
+pixel-constant behaviour. The `screenspace` branch offsets in model space, so
+the outline would swell as you zoom in.
+
+`angle={Math.PI}` makes drei run the geometry through `toCreasedNormals` first.
+Without it the inverted-hull outline tears open at every corner of an extruded
+slab, whose face normals are hard.
+
+And the outline is marked `transparent` even at full opacity. `Outlines` is an
+inverted hull sitting just behind the mesh; as an *opaque* object three renders
+it into the transmission target, so every transmissive surface in front of it
+refracts its own black shell — a clear base comes out nearly black. Transparent
+-listed objects are excluded from that pass, and the hull still draws where it
+should because the acrylic has already written depth in front of it.
+
+The outline is drawn per piece, not around the product as a whole, so in a
+multi-layer stack each layer gets its own.
+
 ## Background and transparent export
 
 **Background → Behind the product** picks Studio (the gradient sweep), Solid

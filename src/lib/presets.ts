@@ -67,6 +67,10 @@ export async function importPreset(file: File): Promise<ImportResult> {
     camera: { ...defaults.camera, ...incoming.camera },
     lighting: { ...defaults.lighting, ...incoming.lighting },
     background: { ...defaults.background, ...incoming.background },
+    lines: {
+      edges: { ...defaults.lines.edges, ...incoming.lines?.edges },
+      outline: { ...defaults.lines.outline, ...incoming.lines?.outline },
+    },
     // Artwork lives in this session only, so every layer comes back unassigned
     // and the user re-points them at re-uploaded PNGs.
     layers: Array.isArray(incoming.layers) && incoming.layers.length

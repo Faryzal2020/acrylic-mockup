@@ -5,6 +5,7 @@ import { circleHole, extrudeSlab, polygonShapes, roundedRectShape } from '../../
 import { useConfigStore } from '../../store/configStore'
 import type { AcrylicLayer, MockupConfig } from '../../types/config'
 import { getAcrylicMaterialProps, getEdgeMaterialProps } from './acrylicMaterial'
+import { InkLines } from './InkLines'
 import { useCheapMaterials } from './useCheapMaterials'
 
 /** Keeps the print from z-fighting with the face it sits on. */
@@ -15,11 +16,13 @@ export function AcrylicLayerMesh({
   layout,
   dims,
   material,
+  lines,
 }: {
   layer: AcrylicLayer
   layout: LayerLayout
   dims: SceneDimensions
   material: MockupConfig['material']
+  lines: MockupConfig['lines']
 }) {
   const texture = useConfigStore((s) =>
     layer.imageAssetId ? (s.assets[layer.imageAssetId]?.texture ?? null) : null,
@@ -101,6 +104,7 @@ export function AcrylicLayerMesh({
         <mesh geometry={geometry}>
           <meshPhysicalMaterial attach="material-0" {...faceProps} />
           <meshPhysicalMaterial attach="material-1" {...edgeProps} />
+          <InkLines lines={lines} />
         </mesh>
 
         {texture && layout.art && (

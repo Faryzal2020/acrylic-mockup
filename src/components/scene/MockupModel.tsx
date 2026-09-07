@@ -23,10 +23,15 @@ export function MockupModel({
         resolution={512}
       />
 
-      <HardwareMesh hardware={config.hardware} dims={dims} />
+      <HardwareMesh hardware={config.hardware} dims={dims} lines={config.lines} />
 
       {config.base.enabled && (
-        <BaseMesh dims={dims} base={config.base} material={config.material} />
+        <BaseMesh
+          dims={dims}
+          base={config.base}
+          material={config.material}
+          lines={config.lines}
+        />
       )}
 
       {config.layers.map((layer, index) => (
@@ -36,6 +41,7 @@ export function MockupModel({
           layout={dims.layers[index]}
           dims={dims}
           material={config.material}
+          lines={config.lines}
         />
       ))}
     </group>
