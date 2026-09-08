@@ -305,6 +305,24 @@ the flat, unshaded acrylic.
   blending while you drag, skipping an entire render pass. Off by default;
   stills and turntables are never affected.
 
+## Layout
+
+The shell is exactly viewport-height: `html`/`body`/`#root`/`.app` are all
+100%, and the two panes scroll internally rather than the page scrolling.
+
+Both `.app__viewport` and `.app__sidebar` are `position: relative`, and that is
+not decoration. An absolutely positioned descendant of a *static* scroll
+container resolves its containing block against the initial containing block
+instead, which means the container's `overflow` does not clip it and it
+contributes to the **page's** scrollable height. The sidebar's toggles each
+hide a `position: absolute` checkbox, so the deepest one was dragging
+`html.scrollHeight` to its own offset — around 3500px — and giving the whole UI
+a second scrollbar over thousands of pixels of blank space. Positioning the
+scroll containers contains and clips them.
+
+If you add an absolutely positioned element to a scrolling panel, make sure the
+panel is positioned too.
+
 ## Notes on the render
 
 - Acrylic is `MeshPhysicalMaterial` with transmission. `ExtrudeGeometry` gives

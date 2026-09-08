@@ -103,6 +103,14 @@ button {
 
 .app__sidebar {
   grid-area: sidebar;
+  /*
+   * Positioned so it is the containing block for any absolutely positioned
+   * descendant. Without this, an absolute child resolves against the initial
+   * containing block instead, which means the sidebar's overflow does not clip
+   * it and it contributes to the *page's* scrollable height — a panel full of
+   * toggles produced thousands of pixels of empty scroll below the app.
+   */
+  position: relative;
   border-left: 1px solid var(--color-border);
   background: var(--color-bg-panel);
   overflow-y: auto;
@@ -361,6 +369,8 @@ button {
 
 /* Toggle */
 .toggle {
+  /* Contains the visually hidden checkbox below. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -401,6 +411,11 @@ button {
 
 .toggle input {
   position: absolute;
+  /* Reachable by keyboard and by the label, but takes up no space. */
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
