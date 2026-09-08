@@ -52,6 +52,9 @@ export type MockupConfig = {
     position: { x: number; y: number }
     /** Through-hole for a keyring, in mm. */
     holeDiameter: number
+    /** Magnet sheet bonded behind the stack, in mm. */
+    magnetThickness: number
+    magnetColor: string
   }
 
   material: {
@@ -114,17 +117,17 @@ export type AcrylicLayer = {
   imageMode: ImageMode
 }
 
-export type ProductType = 'standee' | 'keychain' | 'phoneGrip' | 'badge'
+export type ProductType = 'standee' | 'keychain' | 'magnet' | 'badge'
 export type PanelShape = 'rounded' | 'traceFromAlpha'
 export type BackgroundMode = 'studio' | 'solid' | 'transparent'
 export type BaseShape = 'circle' | 'rectangle' | 'rounded' | 'traceFromAlpha'
-export type HardwareType = 'none' | 'keyring' | 'popSocket'
+export type HardwareType = 'none' | 'keyring' | 'magnet'
 export type MaterialFinish = 'clear' | 'frosted' | 'tinted'
 export type CameraPreset = 'threeQuarter' | 'front' | 'edgeCloseup' | 'custom'
 export type LightingPreset = 'studioSoft' | 'studioHard' | 'daylight'
 export type ImageMode = 'surfacePrint' | 'sandwiched'
 
-export const CONFIG_VERSION = 4
+export const CONFIG_VERSION = 5
 
 /**
  * What switching product type changes. Everything not listed — layers,
@@ -144,11 +147,11 @@ export const PRODUCT_DEFAULTS: Record<ProductType, ProductDefaults> = {
     hardware: 'keyring',
     hardwarePosition: { x: 0.5, y: 0.93 },
   },
-  phoneGrip: {
-    panelHeightMm: 55,
+  magnet: {
+    panelHeightMm: 70,
     baseEnabled: false,
-    hardware: 'popSocket',
-    hardwarePosition: { x: 0.5, y: 0.45 },
+    hardware: 'magnet',
+    hardwarePosition: { x: 0.5, y: 0.5 },
   },
   badge: {
     panelHeightMm: 50,
@@ -200,7 +203,13 @@ export function createDefaultConfig(): MockupConfig {
       tintEnabled: false,
       color: '#d8d8d8',
     },
-    hardware: { type: 'none', position: { x: 0.5, y: 0.92 }, holeDiameter: 4 },
+    hardware: {
+      type: 'none',
+      position: { x: 0.5, y: 0.92 },
+      holeDiameter: 4,
+      magnetThickness: 2,
+      magnetColor: '#232323',
+    },
     material: {
       finish: 'clear',
       tintColor: '#bfe3e0',
@@ -212,7 +221,7 @@ export function createDefaultConfig(): MockupConfig {
     lighting: { preset: 'studioSoft', environmentIntensity: 1 },
     background: { mode: 'studio', color: '#f2f2f2' },
     lines: {
-      edges: { enabled: true, width: 1.5, color: '#2f2f2f' },
+      edges: { enabled: true, width: 0.5, color: '#2f2f2f' },
       outline: { enabled: false, width: 4, color: '#1a1a1a' },
     },
   }

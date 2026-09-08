@@ -55,7 +55,7 @@ export default function App() {
       <header className="app__header">
         <h1 className="app__title">
           Acrylic Mockup
-          <span className="app__subtitle">standee · keychain · grip · badge</span>
+          <span className="app__subtitle">standee · keychain · magnet · badge</span>
         </h1>
 
         <div className="readout">

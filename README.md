@@ -15,7 +15,7 @@ All five phases of the plan are implemented.
 | 0 | Acrylic material spike, transmission cost at 1/3/6 layers | Done |
 | 1 | Single-layer standee MVP, full UI shell, still export | Done |
 | 2 | Multi-layer stacking: add/remove/reorder, per-layer art and placement | Done |
-| 3 | Product types (standee / keychain / grip / badge), keyring hole, hardware | Done |
+| 3 | Product types (standee / keychain / magnet / badge), keyring hole, hardware | Done |
 | 4 | Preset JSON, turntable video, saved views, undo/redo, low-power preview | Done |
 
 Deviations from the plan, all deliberate:
@@ -168,7 +168,7 @@ rather than thinning out at 2x or 3x:
 
 - **Edge lines** — geometric edges via `EdgesGeometry` at an 18-degree crease
   threshold, so the cut contour and the bevel get a line but a smoothed traced
-  outline does not sprout one at every segment join. On by default at 1.5px.
+  outline does not sprout one at every segment join. On by default at 0.5px.
 - **Outline** — a heavier silhouette around each piece, off by default at 4px.
 
 Two non-obvious things are load bearing here.
@@ -191,6 +191,40 @@ should because the acrylic has already written depth in front of it.
 
 The outline is drawn per piece, not around the product as a whole, so in a
 multi-layer stack each layer gets its own.
+
+`Edges` is handed its geometry explicitly rather than left to read
+`parent.geometry` inside a layout effect, and both overlays set
+`frustumCulled={false}`. Between those and the seam fix below, edges no longer
+vanish when the panel's dimensions change.
+
+## Contour rings are deliberately left open
+
+`shapeFromPoints` in `lib/geometry.ts` builds every shape from an explicit ring
+of points and never calls `closePath()`. That omission is load bearing.
+
+ExtrudeGeometry computes its bevel offsets at `ExtrudeGeometry.js:370` via
+`getBevelVec`, but the duplicate end point is only dropped later, inside
+`triangulateShape` at line 402. So a contour whose last point repeats its first
+— which is what `closePath()` produces, and what any curve ending on its own
+start point produces — hands `getBevelVec` a zero-length edge at the seam and
+gets a garbage offset back. The visible symptom was a rounded rectangle's
+bottom-left corner sheared into a diagonal, worse at larger radii because the
+seam sits further from the corner.
+
+Leaving the ring open avoids it: earcut and the side-wall loop both treat the
+list as closed anyway. The same applies to holes, so `pathFromPoints` exists for
+the keyring hole and the base slot. Rounded corners are now true circular arcs
+rather than quadratic Bézier approximations, as a side effect of generating the
+points directly.
+
+## Magnet backing
+
+The **Magnet** product type bonds an opaque sheet behind the stack, cut to the
+same outline as the rearmost acrylic layer and inheriting that layer's
+placement, so it stays registered with the cut however the layer is nudged.
+Default 2mm and dark; thickness is adjustable. It is a plain standard material
+rather than acrylic, so it shows through the clear panel in front of it without
+adding another transmissive surface.
 
 ## Background and transparent export
 

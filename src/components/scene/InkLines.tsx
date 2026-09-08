@@ -1,4 +1,5 @@
 import { Edges, Outlines } from '@react-three/drei'
+import type * as THREE from 'three'
 import type { MockupConfig } from '../../types/config'
 
 /**
@@ -31,17 +32,34 @@ const CREASE_THRESHOLD = 18
  * pass, and the hull still draws where it should because the acrylic has
  * already written depth in front of it.
  */
-export function InkLines({ lines }: { lines: MockupConfig['lines'] }) {
+export function InkLines({
+  lines,
+  geometry,
+}: {
+  lines: MockupConfig['lines']
+  /**
+   * Passed explicitly rather than left to drei to read off the parent mesh.
+   * `Edges` resolves `parent.geometry` inside a layout effect and caches on its
+   * identity; handing it the same geometry object the mesh was given removes
+   * any dependence on when that prop lands, which is what made edges silently
+   * vanish until the toggle was cycled.
+   */
+  geometry?: THREE.BufferGeometry
+}) {
   return (
     <>
       {lines.edges.enabled && lines.edges.width > 0 && (
         <Edges
+          geometry={geometry}
           threshold={CREASE_THRESHOLD}
           lineWidth={lines.edges.width}
           color={lines.edges.color}
           toneMapped={false}
           polygonOffset
           polygonOffsetFactor={-4}
+          // Line bounds are derived from a geometry that changes shape under
+          // them; never let a stale bounding sphere cull the lines away.
+          frustumCulled={false}
         />
       )}
 

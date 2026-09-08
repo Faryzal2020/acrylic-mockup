@@ -4,9 +4,9 @@ import type { MockupConfig } from '../../types/config'
 import { InkLines } from './InkLines'
 
 /**
- * Keyring and pop-socket hardware. Both are brushed metal / moulded plastic
- * rather than acrylic, so they use plain standard materials — keeping them out
- * of the transmission pass, which is the expensive one.
+ * Keyring hardware: brushed metal rather than acrylic, so it takes a plain
+ * standard material and stays out of the transmission pass, which is the
+ * expensive one.
  */
 export function HardwareMesh({
   hardware,
@@ -44,29 +44,7 @@ export function HardwareMesh({
     )
   }
 
-  // Pop socket: mounts flat on the back of the stack.
-  const outerRadius = Math.min(dims.panelWidth, dims.panelHeight) * 0.26
-  const backZ = -dims.stackDepth / 2
-
-  return (
-    <group
-      position={[x, dims.panelCentreY + y, backZ]}
-      rotation={[Math.PI / 2, 0, 0]}
-    >
-      <mesh position={[0, -mm(1.5), 0]}>
-        <cylinderGeometry args={[outerRadius, outerRadius, mm(3), 48]} />
-        <meshStandardMaterial color="#2f2f2f" roughness={0.55} metalness={0} />
-        <InkLines lines={lines} />
-      </mesh>
-      <mesh position={[0, -mm(6), 0]}>
-        <cylinderGeometry args={[outerRadius * 0.82, outerRadius * 0.9, mm(6), 48]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.7} metalness={0} />
-      </mesh>
-      <mesh position={[0, -mm(10), 0]}>
-        <cylinderGeometry args={[outerRadius * 0.98, outerRadius * 0.82, mm(2.5), 48]} />
-        <meshStandardMaterial color="#2f2f2f" roughness={0.4} metalness={0} />
-        <InkLines lines={lines} />
-      </mesh>
-    </group>
-  )
+  // The magnet sheet is cut from the panel's own outline, so it lives in
+  // MagnetSheet where that geometry is available.
+  return null
 }

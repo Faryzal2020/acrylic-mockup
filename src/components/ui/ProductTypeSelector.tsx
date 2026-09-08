@@ -15,7 +15,7 @@ export function ProductTypeSelector() {
         options={[
           { value: 'standee', label: 'Standee' },
           { value: 'keychain', label: 'Keychain' },
-          { value: 'phoneGrip', label: 'Grip' },
+          { value: 'magnet', label: 'Magnet' },
           { value: 'badge', label: 'Badge' },
         ]}
         onChange={setProductType}
@@ -32,12 +32,26 @@ export function ProductTypeSelector() {
         options={[
           { value: 'none', label: 'None' },
           { value: 'keyring', label: 'Keyring' },
-          { value: 'popSocket', label: 'Pop socket' },
+          { value: 'magnet', label: 'Magnet' },
         ]}
         onChange={(type) => patchSection('hardware', { type })}
       />
 
-      {hardware.type !== 'none' && (
+      {hardware.type === 'magnet' && (
+        <Slider
+          label="Magnet thickness"
+          value={hardware.magnetThickness}
+          min={0.5}
+          max={6}
+          step={0.5}
+          precision={1}
+          unit=" mm"
+          hint="An opaque sheet bonded behind the stack, cut to the same outline as the back layer."
+          onChange={(magnetThickness) => patchSection('hardware', { magnetThickness })}
+        />
+      )}
+
+      {hardware.type === 'keyring' && (
         <>
           <div className="row">
             <Slider
@@ -64,7 +78,7 @@ export function ProductTypeSelector() {
             />
           </div>
 
-          {hardware.type === 'keyring' && (
+          {(
             <Slider
               label="Hole diameter"
               value={hardware.holeDiameter}

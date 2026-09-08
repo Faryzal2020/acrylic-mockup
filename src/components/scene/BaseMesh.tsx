@@ -82,7 +82,7 @@ export function BaseMesh({
       >
         <meshPhysicalMaterial attach="material-0" {...faceProps} />
         <meshPhysicalMaterial attach="material-1" {...edgeProps} />
-        <InkLines lines={lines} />
+        <InkLines lines={lines} geometry={geometry} />
       </mesh>
 
       {texture && art && base.imageOnBase && (

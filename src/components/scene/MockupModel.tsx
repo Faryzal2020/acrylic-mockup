@@ -4,6 +4,7 @@ import type { MockupConfig } from '../../types/config'
 import { AcrylicLayerMesh } from './AcrylicLayerMesh'
 import { BaseMesh } from './BaseMesh'
 import { HardwareMesh } from './HardwareMesh'
+import { MagnetSheet } from './MagnetSheet'
 
 export function MockupModel({
   config,
@@ -24,6 +25,16 @@ export function MockupModel({
       />
 
       <HardwareMesh hardware={config.hardware} dims={dims} lines={config.lines} />
+
+      {config.hardware.type === 'magnet' && dims.layers.length > 0 && (
+        // Backed onto the rearmost layer, which is the one it is bonded to.
+        <MagnetSheet
+          layout={dims.layers[0]}
+          dims={dims}
+          hardware={config.hardware}
+          lines={config.lines}
+        />
+      )}
 
       {config.base.enabled && (
         <BaseMesh

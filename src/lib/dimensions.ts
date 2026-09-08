@@ -1,7 +1,44 @@
 import type { ImageAsset } from '../store/configStore'
-import { traceOutlineCached } from './outlineTrace'
+import type { Point2 } from './geometry'
+import { traceOutlineCached, type TracedOutline } from './outlineTrace'
 import type { AcrylicLayer, MockupConfig } from '../types/config'
 import { MM, mm } from './units'
+
+/**
+ * Scaled contours, cached per traced outline.
+ *
+ * Identity matters as much as the values: the mesh rebuilds its ExtrudeGeometry
+ * whenever the outline array changes identity, and dimensions are recomputed on
+ * every config change — so mapping fresh arrays each time rebuilt every panel's
+ * geometry on an unrelated tweak like roughness. `traceOutlineCached` already
+ * returns a stable object for stable inputs, so keying off it is enough.
+ */
+const scaledContours = new WeakMap<TracedOutline, Map<string, Point2[][]>>()
+
+function scaleContours(
+  traced: TracedOutline,
+  scale: number,
+  offsetX = 0,
+  offsetY = 0,
+): Point2[][] {
+  let perOutline = scaledContours.get(traced)
+  if (!perOutline) {
+    perOutline = new Map()
+    scaledContours.set(traced, perOutline)
+  }
+
+  const round = (n: number) => Math.round(n * 1e6)
+  const key = `${round(scale)}|${round(offsetX)}|${round(offsetY)}`
+
+  let cached = perOutline.get(key)
+  if (!cached) {
+    cached = traced.contours.map((contour) =>
+      contour.map((p) => ({ x: (p.x - offsetX) * scale, y: (p.y - offsetY) * scale })),
+    )
+    perOutline.set(key, cached)
+  }
+  return cached
+}
 
 /** Fallback panel proportion before any artwork is uploaded. */
 const DEFAULT_ASPECT = 0.7
@@ -151,9 +188,7 @@ function getBasePlate(config: MockupConfig, assets: Record<string, ImageAsset>) 
   return {
     width: across,
     depth: (maxY - minY) * scale,
-    outline: traced.contours.map((contour) =>
-      contour.map((p) => ({ x: (p.x - centreX) * scale, y: (p.y - centreY) * scale })),
-    ),
+    outline: scaleContours(traced, scale, centreX, centreY),
     art: {
       width: (asset.width / asset.height) * scale,
       height: scale,
@@ -332,11 +367,7 @@ function getTracedShape(config: MockupConfig, reference: ImageAsset): PanelShape
       )
 
       return {
-        outline: outline
-          ? outline.contours.map((contour) =>
-              contour.map((p) => ({ x: p.x * scale, y: p.y * scale })),
-            )
-          : null,
+        outline: outline ? scaleContours(outline, scale) : null,
         art: { width: (asset.width / asset.height) * scale, height: scale },
         offset: [shiftX, shiftY],
       }

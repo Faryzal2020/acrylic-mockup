@@ -23,9 +23,9 @@ export function LineControls() {
           <Slider
             label="Edge width"
             value={lines.edges.width}
-            min={0.5}
+            min={0.25}
             max={8}
-            step={0.1}
+            step={0.25}
             precision={1}
             unit=" px"
             hint="Follows the cut contour and any sharp crease in the acrylic."
